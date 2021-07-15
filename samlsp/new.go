@@ -3,6 +3,7 @@ package samlsp
 
 import (
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"net/http"
 	"net/url"
@@ -19,6 +20,7 @@ type Options struct {
 	Key                   *rsa.PrivateKey
 	Certificate           *x509.Certificate
 	Intermediates         []*x509.Certificate
+	TLSClientCertificate  *tls.Certificate
 	AllowIDPInitiated     bool
 	IDPMetadata           *saml.EntityDescriptor
 	SignRequest           bool
@@ -100,6 +102,7 @@ func DefaultServiceProvider(opts Options) saml.ServiceProvider {
 		EntityID:              opts.EntityID,
 		Key:                   opts.Key,
 		Certificate:           opts.Certificate,
+		TLSClientCertificate:  opts.TLSClientCertificate,
 		Intermediates:         opts.Intermediates,
 		MetadataURL:           *metadataURL,
 		AcsURL:                *acsURL,
