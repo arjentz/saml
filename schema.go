@@ -46,7 +46,7 @@ type AuthnRequest struct {
 	Subject               *Subject
 	NameIDPolicy          *NameIDPolicy `xml:"urn:oasis:names:tc:SAML:2.0:protocol NameIDPolicy"`
 	Conditions            *Conditions
-	RequestedAuthnContext *RequestedAuthnContext // TODO
+	RequestedAuthnContext *RequestedAuthnContext
 	//Scoping               *Scoping // TODO
 
 	ForceAuthn                     *bool  `xml:",attr"`
@@ -313,9 +313,9 @@ func (a *NameIDPolicy) Element() *etree.Element {
 	return el
 }
 
-// ArtifactRequest represents the SAML object of the same name.
+// ArtifactResolve represents the SAML object of the same name.
 type ArtifactResolve struct {
-	XMLName      xml.Name  `xml:"urn:oasis:names:tc:SAML:2.0:protocol ArtifactResponse"`
+	XMLName      xml.Name  `xml:"urn:oasis:names:tc:SAML:2.0:protocol ArtifactResolve"`
 	ID           string    `xml:",attr"`
 	Version      string    `xml:",attr"`
 	IssueInstant time.Time `xml:",attr"`
