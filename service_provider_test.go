@@ -1648,3 +1648,60 @@ func TestSPResponseWithNoIssuer(t *testing.T) {
 	_, err = s.ParseResponse(&req, []string{"id-9e61753d64e928af5a7a341a97f420c9"})
 	assert.Check(t, err)
 }
+
+func TestMakeArtifactResolveRequest(t *testing.T) {
+	test := NewServiceProviderTest(t)
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata: &EntityDescriptor{},
+	}
+
+	req, err := sp.MakeArtifactResolveRequest("artifactId")
+	assert.Check(t, err)
+
+	x, err := xml.Marshal(req)
+	assert.Check(t, err)
+	golden.Assert(t, string(x), t.Name())
+}
+
+
+func TestMakeSignedArtifactResolveRequest(t *testing.T) {
+	test := NewServiceProviderTest(t)
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata: &EntityDescriptor{},
+		SignatureMethod: dsig.RSASHA1SignatureMethod,
+	}
+
+	req, err := sp.MakeArtifactResolveRequest("artifactId")
+	assert.Check(t, err)
+
+	x, err := xml.Marshal(req)
+	assert.Check(t, err)
+	golden.Assert(t, string(x), t.Name())
+}
+
+func TestMakeSignedArtifactResolveRequestWithBogusSignatureMethod(t *testing.T) {
+	test := NewServiceProviderTest(t)
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata: &EntityDescriptor{},
+		SignatureMethod: "bogus",
+	}
+
+	_, err := sp.MakeArtifactResolveRequest("artifactId")
+	assert.Check(t, is.ErrorContains(err, ""), "invalid signing method bogus")
+
+}
