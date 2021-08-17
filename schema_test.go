@@ -97,7 +97,7 @@ func TestAuthnStatementMarshalWithoutSessionNotOnOrAfter(t *testing.T) {
 
 func TestRequestedAuthnContext(t *testing.T) {
 	expected := RequestedAuthnContext{
-		Comparison:      "comparison",
+		Comparison: "comparison",
 	}
 
 	doc := etree.NewDocument()
@@ -152,7 +152,6 @@ func TestArtifactResolveSoapRequest(t *testing.T) {
 		string(x)))
 }
 
-
 func TestArtifactResponseElement(t *testing.T) {
 	issueInstant := time.Date(2020, 7, 21, 12, 30, 45, 0, time.UTC)
 	status := Status{
@@ -160,7 +159,7 @@ func TestArtifactResponseElement(t *testing.T) {
 			Space: "urn:oasis:names:tc:SAML:2.0:protocol",
 			Local: "Status",
 		},
-		StatusCode:  StatusCode {
+		StatusCode: StatusCode{
 			XMLName: xml.Name{
 				Space: "urn:oasis:names:tc:SAML:2.0:protocol",
 				Local: "StatusCode",
@@ -169,18 +168,18 @@ func TestArtifactResponseElement(t *testing.T) {
 		},
 	}
 	expected := ArtifactResponse{
-		ID: "index",
+		ID:           "index",
 		InResponseTo: "ID",
-		Version: "version",
+		Version:      "version",
 		IssueInstant: issueInstant,
-		Status: status,
+		Status:       status,
 		Response: Response{
-			ID: "index",
+			ID:           "index",
 			InResponseTo: "ID",
-			Version: "version",
-			Destination: "destination",
-			Consent: "consent",
-			Status: status,
+			Version:      "version",
+			Destination:  "destination",
+			Consent:      "consent",
+			Status:       status,
 			IssueInstant: issueInstant,
 		},
 		// Signature *etree.Element

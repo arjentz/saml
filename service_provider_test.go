@@ -1668,16 +1668,15 @@ func TestMakeArtifactResolveRequest(t *testing.T) {
 	golden.Assert(t, string(x), t.Name())
 }
 
-
 func TestMakeSignedArtifactResolveRequest(t *testing.T) {
 	test := NewServiceProviderTest(t)
 
 	sp := ServiceProvider{
-		Key:         test.Key,
-		Certificate: test.Certificate,
-		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
-		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
-		IDPMetadata: &EntityDescriptor{},
+		Key:             test.Key,
+		Certificate:     test.Certificate,
+		MetadataURL:     mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:          mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata:     &EntityDescriptor{},
 		SignatureMethod: dsig.RSASHA1SignatureMethod,
 	}
 
@@ -1693,11 +1692,11 @@ func TestMakeSignedArtifactResolveRequestWithBogusSignatureMethod(t *testing.T) 
 	test := NewServiceProviderTest(t)
 
 	sp := ServiceProvider{
-		Key:         test.Key,
-		Certificate: test.Certificate,
-		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
-		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
-		IDPMetadata: &EntityDescriptor{},
+		Key:             test.Key,
+		Certificate:     test.Certificate,
+		MetadataURL:     mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:          mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata:     &EntityDescriptor{},
 		SignatureMethod: "bogus",
 	}
 
