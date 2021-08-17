@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
 	"gotest.tools/assert"
 	is "gotest.tools/assert/cmp"
 	"gotest.tools/golden"
@@ -1647,6 +1646,28 @@ func TestSPResponseWithNoIssuer(t *testing.T) {
 	req.PostForm.Set("SAMLResponse", base64.StdEncoding.EncodeToString(samlResponse))
 	_, err = s.ParseResponse(&req, []string{"id-9e61753d64e928af5a7a341a97f420c9"})
 	assert.Check(t, err)
+}
+
+func TestGetArtifactBindingLocation(t *testing.T) {
+	test := NewServiceProviderTest(t)
+	test.IDPMetadata = golden.Get(t, "TestGetArtifactBindingLocation_IDPMetadata")
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("https://example.com/saml2/metadata"),
+		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata: &EntityDescriptor{},
+	}
+
+	location := sp.GetArtifactBindingLocation(SOAPBinding)
+	assert.Check(t, is.Equal(location, ""))
+
+	err := xml.Unmarshal(test.IDPMetadata, &sp.IDPMetadata)
+	assert.Check(t, err)
+
+	location = sp.GetArtifactBindingLocation(SOAPBinding)
+	assert.Check(t, is.Equal(location, "https://samltest.id/idp/profile/SAML2/SOAP/ArtifactResolution"))
 }
 
 func TestMakeArtifactResolveRequest(t *testing.T) {
