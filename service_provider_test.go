@@ -6,6 +6,9 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/xml"
+	"gotest.tools/assert"
+	is "gotest.tools/assert/cmp"
+	"gotest.tools/golden"
 	"html"
 	"net/http"
 	"net/url"
@@ -13,9 +16,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"gotest.tools/assert"
-	is "gotest.tools/assert/cmp"
-	"gotest.tools/golden"
 
 	"github.com/beevik/etree"
 	dsig "github.com/russellhaering/goxmldsig"
@@ -306,7 +306,7 @@ func TestSPFailToProduceSignedRequestWithBogusSignatureMethod(t *testing.T) {
 	assert.Check(t, err)
 
 	_, err = s.MakeRedirectAuthenticationRequest("relayState")
-	assert.Check(t, is.ErrorContains(err, ""), "invalid signing method bogus")
+	assert.Check(t, is.ErrorContains(err, "invalid signing method bogus"))
 }
 
 func TestSPCanProducePostLogoutRequest(t *testing.T) {
@@ -1722,7 +1722,7 @@ func TestMakeSignedArtifactResolveRequestWithBogusSignatureMethod(t *testing.T) 
 	}
 
 	_, err := sp.MakeArtifactResolveRequest("artifactId")
-	assert.Check(t, is.ErrorContains(err, ""), "invalid signing method bogus")
+	assert.Check(t, is.ErrorContains(err, "invalid signing method bogus"))
 
 }
 
@@ -1744,7 +1744,6 @@ func TestParseXMLArtifactResponse(t *testing.T) {
 		MetadataURL: mustParseURL("http://localhost:8000/saml/metadata"),
 		AcsURL:      mustParseURL("http://localhost:8000/saml/acs"),
 		IDPMetadata: &EntityDescriptor{},
-		SignatureMethod: dsig.RSASHA1SignatureMethod,
 	}
 
 	err := xml.Unmarshal(test.IDPMetadata, &sp.IDPMetadata)
@@ -1759,5 +1758,90 @@ func TestParseXMLArtifactResponse(t *testing.T) {
 	x, err := xml.Marshal(assertion)
 	assert.Check(t, err)
 
-	golden.Assert(t, string(x), t.Name() + "_assertion")
+	golden.Assert(t, string(x), t.Name()+"_assertion")
+}
+
+func TestParseBadXMLArtifactResponse(t *testing.T) {
+	test := NewServiceProviderTest(t)
+	TimeNow = func() time.Time {
+		rv, _ := time.Parse(timeFormat, "2021-08-17T10:26:57Z")
+		return rv
+	}
+	Clock = dsig.NewFakeClockAt(TimeNow())
+
+	// an actual response from samltest.id
+	samlResponse := golden.Get(t, "TestParseXMLArtifactResponse_response")
+	test.IDPMetadata = golden.Get(t, "TestGetArtifactBindingLocation_IDPMetadata")
+
+	possibleReqIDs := []string{"id-f3c7bc7d626a4ededa6028b718e5252c6e770b94"}
+	reqID := "id-218eb155248f7db7c85fe4e2709a3f17a70d09c7"
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("http://localhost:8000/saml/metadata"),
+		AcsURL:      mustParseURL("https://example.com/saml2/acs"),
+		IDPMetadata: &EntityDescriptor{},
+	}
+
+	assertion, err := sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"response Issuer does not match the IDP metadata (expected \"\")"))
+	assert.Check(t, is.Nil(assertion))
+
+	err = xml.Unmarshal(test.IDPMetadata, &sp.IDPMetadata)
+	assert.Check(t, err)
+
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"`Destination` does not match AcsURL (expected \"https://example.com/saml2/acs\", actual \"http://localhost:8000/saml/acs\")"))
+	assert.Check(t, is.Nil(assertion))
+
+	sp.AcsURL = mustParseURL("http://localhost:8000/saml/acs")
+
+	// TimeNow is used to verify the response time
+	TimeNow = func() time.Time {
+		rv, _ := time.Parse(timeFormat, "2022-08-17T10:26:57Z")
+		return rv
+	}
+
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"response IssueInstant expired at 2021-08-17 10:28:50.146 +0000 UTC"))
+	assert.Check(t, is.Nil(assertion))
+
+	// Clock is used to verify the certificate
+	Clock = dsig.NewFakeClockAt(func() time.Time {
+		rv, _ := time.Parse(timeFormat, "2039-08-17T10:26:57Z")
+		return rv
+	}())
+	TimeNow = func() time.Time {
+		rv, _ := time.Parse(timeFormat, "2021-08-17T10:26:57Z")
+		return rv
+	}
+
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"cannot validate signature on Response: Cert is not valid at this time"))
+	assert.Check(t, is.Nil(assertion))
+	Clock = dsig.NewFakeClockAt(TimeNow())
+
+	wrongReqID := "id-218eb155248f7db7c85fe4e2709a3f17a70d09c8"
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, wrongReqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"`InResponseTo` does not match the artifact request ID (expected id-218eb155248f7db7c85fe4e2709a3f17a70d09c8)"))
+	assert.Check(t, is.Nil(assertion))
+
+	wrongPossibleReqIDs := []string{"id-f3c7bc7d626a4ededa6028b718e5252c6e770b95"}
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, wrongPossibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"`InResponseTo` does not match any of the possible request IDs (expected [id-f3c7bc7d626a4ededa6028b718e5252c6e770b95])"))
+	assert.Check(t, is.Nil(assertion))
+
+	// random other key
+	sp.Key = mustParsePrivateKey(golden.Get(t, "key_2017.pem")).(*rsa.PrivateKey)
+	assertion, err = sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, is.Error(err.(*InvalidResponseError).PrivateErr,
+		"failed to decrypt response: certificate does not match provided key"))
+	assert.Check(t, is.Nil(assertion))
 }
