@@ -1725,3 +1725,39 @@ func TestMakeSignedArtifactResolveRequestWithBogusSignatureMethod(t *testing.T) 
 	assert.Check(t, is.ErrorContains(err, ""), "invalid signing method bogus")
 
 }
+
+func TestParseXMLArtifactResponse(t *testing.T) {
+	test := NewServiceProviderTest(t)
+	TimeNow = func() time.Time {
+		rv, _ := time.Parse(timeFormat, "2021-08-17T10:26:57Z")
+		return rv
+	}
+	Clock = dsig.NewFakeClockAt(TimeNow())
+
+	// an actual response from samltest.id
+	samlResponse := golden.Get(t, "TestParseXMLArtifactResponse_response")
+	test.IDPMetadata = golden.Get(t, "TestGetArtifactBindingLocation_IDPMetadata")
+
+	sp := ServiceProvider{
+		Key:         test.Key,
+		Certificate: test.Certificate,
+		MetadataURL: mustParseURL("http://localhost:8000/saml/metadata"),
+		AcsURL:      mustParseURL("http://localhost:8000/saml/acs"),
+		IDPMetadata: &EntityDescriptor{},
+		SignatureMethod: dsig.RSASHA1SignatureMethod,
+	}
+
+	err := xml.Unmarshal(test.IDPMetadata, &sp.IDPMetadata)
+	assert.Check(t, err)
+
+	possibleReqIDs := []string{"id-f3c7bc7d626a4ededa6028b718e5252c6e770b94"}
+	reqID := "id-218eb155248f7db7c85fe4e2709a3f17a70d09c7"
+
+	assertion, err := sp.ParseXMLArtifactResponse(samlResponse, possibleReqIDs, reqID)
+	assert.Check(t, err)
+
+	x, err := xml.Marshal(assertion)
+	assert.Check(t, err)
+
+	golden.Assert(t, string(x), t.Name() + "_assertion")
+}
