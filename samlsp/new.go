@@ -26,6 +26,7 @@ type Options struct {
 	SignRequest         bool
 	UseArtifactResponse bool
 	ForceAuthn          bool // TODO(ross): this should be *bool
+	RequestedAuthnContext *saml.RequestedAuthnContext
 	CookieSameSite      http.SameSite
 	RelayStateFunc      func(w http.ResponseWriter, r *http.Request) string
 }
@@ -112,6 +113,7 @@ func DefaultServiceProvider(opts Options) saml.ServiceProvider {
 		SloURL:             *sloURL,
 		IDPMetadata:        opts.IDPMetadata,
 		ForceAuthn:         forceAuthn,
+		RequestedAuthnContext: opts.RequestedAuthnContext,
 		SignatureMethod:    signatureMethod,
 		AllowIDPInitiated:  opts.AllowIDPInitiated,
 		DefaultRedirectURI: opts.DefaultRedirectURI,
