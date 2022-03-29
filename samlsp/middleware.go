@@ -40,7 +40,7 @@ import (
 // to sign the JWTs as well.
 type Middleware struct {
 	ServiceProvider saml.ServiceProvider
-	OnError         func(w http.ResponseWriter, r *http.Request, err error)
+	OnError         ErrorFunction
 	Binding         string // either saml.HTTPPostBinding or saml.HTTPRedirectBinding
 	ResponseBinding string // either saml.HTTPPostBinding or saml.HTTPArtifactBinding
 	RequestTracker  RequestTracker
